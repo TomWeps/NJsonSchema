@@ -81,13 +81,74 @@ namespace NJsonSchema.CodeGeneration
             }
         }
 
+
+        /// <summary>
+        /// ToDo
+        /// </summary>
+        protected readonly static JsonSchema BaseSchema = new JsonSchema();
+
+
         /// <summary>Removes a nullable oneOf reference if available.</summary>
         /// <param name="schema">The schema.</param>
         /// <returns>The actually resolvable schema</returns>
         public JsonSchema RemoveNullability(JsonSchema schema)
         {
+            // OLD
             // TODO: Method on JsonSchema4?
-            return schema.OneOf.FirstOrDefault(o => !o.IsNullable(SchemaType.JsonSchema)) ?? schema;
+            //return schema.OneOf.FirstOrDefault(o => !o.IsNullable(SchemaType.JsonSchema)) ?? schema;
+
+            // NEW                                    
+            var oneOfArray = schema.OneOf.Where(o => !o.IsNullable(SchemaType.JsonSchema)).ToArray();
+            if (oneOfArray.Length == 0)
+            {
+                return schema;
+            }
+
+            if (oneOfArray.Length == 1)
+            {
+                return oneOfArray[0];
+            }
+
+            // descendants
+
+
+            JsonSchema[][] descendants = new JsonSchema[oneOfArray.Length][];
+            for (int i = 0; i < oneOfArray.Length; i++)
+            {
+                var descendantSchemas = new List<JsonSchema>();
+                var currentSchema = oneOfArray[i].ActualSchema;
+                while (currentSchema != null)
+                {
+                    descendantSchemas.Add(currentSchema);
+                    currentSchema = currentSchema.ActualSchema.InheritedSchema;
+                }
+                descendants[i] = descendantSchemas.ToArray();
+            }
+
+            // find a shared parent
+            int depthMax = descendants.Max(x => x.Length);
+            int depth = 0;
+
+            while (depth < depthMax)
+            {
+                for (int i = 0; i < descendants.Length; i++)
+                {
+                    if (descendants[i].Length > depth)
+                    {
+                        var candidate = descendants[i][depth];
+                        bool isSharedBase = descendants.All(x => x.Any(y => y == candidate));
+
+                        if (isSharedBase)
+                        {
+                            return candidate;
+                        }
+                    }
+                }
+                depth++;
+            }
+
+            return BaseSchema;
+
         }
 
         /// <summary>Gets the actual schema (i.e. when not referencing a type schema or it is inlined)

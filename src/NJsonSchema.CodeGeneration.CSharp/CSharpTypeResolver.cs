@@ -62,6 +62,12 @@ namespace NJsonSchema.CodeGeneration.CSharp
 
             schema = GetResolvableSchema(schema);
 
+            if (schema == BaseSchema)
+            {
+                return "object";
+            }
+
+
             if (schema == ExceptionSchema)
             {
                 return "System.Exception";
