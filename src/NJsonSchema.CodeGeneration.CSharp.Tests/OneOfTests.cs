@@ -258,7 +258,61 @@ namespace NJsonSchema.CodeGeneration.CSharp.Tests
             Assert.Contains("public TypeShared Polymorphism { get; set; }", code);
         }
 
-    
+        [Fact]
+        public async Task When_Property_with_OneOf_defines_discriminator_not_supported_case()
+        {
+            //// Arrange
+            var json = @"{
+    ""type"": ""object"",
+    ""additionalProperties"": false,    
+    ""properties"": {
+        ""foo"": {
+           ""oneOf"": [
+                {
+                    ""$ref"": ""#/definitions/typeA""
+                },
+                {
+                    ""$ref"": ""#/definitions/typeB""   
+                }
+           ],       
+           ""discriminator"": {
+              ""propertyName"": ""fooType"",
+           }
+        }    
+    },
+    ""definitions"": {        
+        ""typeA"": {
+            ""type"": ""object"",
+            ""additionalProperties"": false,
+            ""properties"": {
+                ""propA"": {
+                    ""type"": ""string""
+                }
+            }
+        },
+        ""typeB"": {
+            ""type"": ""object"",
+            ""additionalProperties"": false,
+            ""properties"": {
+                ""propB"": {
+                    ""type"": ""string""
+                }
+            }            
+            
+        }
+    }
+}";
+            
+            var schema = await JsonSchema.FromJsonAsync(json);
+            var generator = new CSharpGenerator(schema, new CSharpGeneratorSettings { ClassStyle = CSharpClassStyle.Poco });
+
+            //// Act
+            var code = generator.GenerateFile();
+
+            //// Assert            
+            Assert.DoesNotContain("fooType", code, StringComparison.InvariantCultureIgnoreCase);
+        }
+
 
     }
 }
